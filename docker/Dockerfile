@@ -42,9 +42,16 @@ RUN apk add --no-cache \
 # hadolint ignore=DL3018
 RUN apk add --no-cache nodejs npm python3 py3-pip && rm -rf /var/cache/apk/*
 
-# 编译链：node-gyp 之类原生依赖需要。只跑纯 JS 项目可以注释掉整段，省 ~120 MB
+# 编译链：能编 C/C++（node-gyp 原生模块、pip 源码包都靠它）。g++ 会自动带入 gcc、
+# musl-dev（C 头文件与 libc.a）、libstdc++-dev、binutils、libgomp（支持 -fopenmp）。
+# 代价是 +355 MiB：构建时传 --build-arg WITH_TOOLCHAIN=0 可跳过，镜像约 780 → 425 MiB。
+ARG WITH_TOOLCHAIN=1
 # hadolint ignore=DL3018
-RUN apk add --no-cache make g++ python3-dev && rm -rf /var/cache/apk/*
+RUN if [ "$WITH_TOOLCHAIN" = "1" ]; then \
+      apk add --no-cache make g++ python3-dev && rm -rf /var/cache/apk/*; \
+    else \
+      echo "跳过编译链 (WITH_TOOLCHAIN=0)"; \
+    fi
 
 # Alpine 仓库里没有 bun 包。opencode 自带内置 bun 运行时（Code Mode 就是它跑的），
 # 通常不需要独立 bun。确实要的话取消注释（官方 musl 构建，已按架构分支）：
@@ -72,7 +79,7 @@ RUN set -eu; \
     echo "node     : $(node --version)"; \
     echo "npm      : $(npm --version)"; \
     echo "python   : $(python3 --version)"; \
-    echo "gcc      : $(gcc --version | head -1)"; \
+    echo "gcc      : $(if command -v gcc >/dev/null 2>&1; then gcc --version | head -1; else echo '未装 (WITH_TOOLCHAIN=0)'; fi)"; \
     echo "coreutils: $(sed --version | head -1) / $(find --version | head -1)"; \
     echo "grep -P  : $(printf abc | grep -P 'a.c')"; \
     echo "rg       : $(rg --version | head -1)"; \

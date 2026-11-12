@@ -117,7 +117,16 @@ Dockerfile 里也有一份同样的构建期自检 —— 任何一项没装上�
 | musl 而非 glibc | glibc 预编译二进制跑不了 | ❌ 加包解决不了，要 glibc 就换 `ubuntu:24.04` 基础镜像 |
 | 无法拉起宿主浏览器 | OAuth 本地回调不便 | ❌ 容器性质，与包无关；用 API key / 设备码登录 |
 
-镜像体积：官方约 139 MB → 全量约 300 MB（不含 `make g++ python3-dev` 约 180 MB）。
+镜像体积（实测口径，未压缩）：
+
+| 形态 | 镜像大小 | 说明 |
+| --- | --- | --- |
+| 官方 `ghcr.io/anomalyco/opencode` | 约 265 MiB | 其中 `opencode` 二进制就占 249 MiB |
+| opencode-full 含编译链 | 约 **780 MiB** | 默认，`WITH_TOOLCHAIN=1` |
+| opencode-full 不含编译链 | 约 **425 MiB** | `--build-arg WITH_TOOLCHAIN=0` |
+
+编译链净增 355.5 MiB（gcc 159.9 + python3-dev 101.1 + g++ 45.1 + libstdc++-dev 21.9 + binutils 10.1 + musl-dev 9.4 …）。
+`docker pull` 的传输量约为未压缩的 0.48 倍（按官方镜像压缩比推算）：含编译链约 375 MiB，不含约 205 MiB。
 
 ## 想调内容
 
@@ -125,7 +134,7 @@ Dockerfile 里也有一份同样的构建期自检 —— 任何一项没装上�
 
 | 想要的东西 | 包名 | 备注 |
 | --- | --- | --- |
-| 编译原生 npm 模块 | `make g++ python3-dev` | 已默认装，占 ~120 MB，不要就注释掉那行 |
+| 编译原生 npm 模块 / C++ | `make g++ python3-dev` | 已默认含（`WITH_TOOLCHAIN=1`），占 355 MiB；不需要就用 `--build-arg WITH_TOOLCHAIN=0` |
 | 无头浏览器 / puppeteer | `chromium` | musl 原生版，配 `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium` |
 | 音视频处理 | `ffmpeg` 8.1.3 | |
 | 压缩/排查 | `file zip unzip htop lsof` | 已默认装 |
