@@ -67,10 +67,14 @@ jobs:
             v="${INPUT_VERSION#v}"
             echo "使用手动指定版本: ${v}"
           else
-            v=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" \
-                https://api.github.com/repos/anomalyco/opencode/releases/latest \
-                | jq -r .tag_name)
-            v="${v#v}"
+            # 注意：上游把「latest release」标记停在了旧版本 v1.19.5，且 releases 里混有
+            # process-daemon-* / vscode-* 等其它产品线，所以不能用 /releases/latest。
+            # 正确做法：拉全部 release，只保留 vX.Y.Z 形态的正式版，取版本号最大的。
+            v=$( { curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" \
+                  'https://api.github.com/repos/anomalyco/opencode/releases?per_page=100' \
+                  | jq -r '.[] | select(.draft==false and .prerelease==false) | .tag_name' \
+                  | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
+                  | sed 's/^v//' | sort -V | tail -1; } || true)
             echo "上游最新 release: ${v}"
           fi
           case "${v}" in
