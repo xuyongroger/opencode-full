@@ -1,0 +1,170 @@
+name: build-opencode-full-image
+
+# 探测 anomalyco/opencode 上游最新 release；有新版本就在 GitHub 云端构建补全工具链
+# （git / bash / curl / tzdata / node / npm / python）的镜像并推到 GHCR。
+# 版本没变化就跳过，不浪费 Actions 分钟。
+#
+# ⚠️ 当前是「手动模式」：schedule 已被注释掉，push 代码不会触发构建（本 workflow
+#    也没有 push 触发器）。要恢复每日自动构建，取消下面 schedule 两行的注释即可。
+on:
+  # schedule:
+  #   - cron: "17 1 * * *"   # UTC 01:17 = 北京 09:17，避开整点减少排队延迟
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "指定 OpenCode 版本（留空 = 自动取上游最新 release），如 2.2.7"
+        required: false
+        default: ""
+      rebuild:
+        description: "目标 tag 已存在时仍强制重建覆盖"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: opencode-full-image
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  BASE: ghcr.io/anomalyco/opencode
+  IMAGE_NAME: opencode-full
+
+jobs:
+  build:
+    name: build & push opencode-full
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 解析目标版本
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          REBUILD: ${{ github.event.inputs.rebuild }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          # GHCR 要求命名空间全小写，组织名可能带大写，这里统一转小写
+          image="${REGISTRY}/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/${IMAGE_NAME}"
+
+          if [ -n "${INPUT_VERSION}" ]; then
+            v="${INPUT_VERSION#v}"
+            echo "使用手动指定版本: ${v}"
+          else
+            v=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" \
+                https://api.github.com/repos/anomalyco/opencode/releases/latest \
+                | jq -r .tag_name)
+            v="${v#v}"
+            echo "上游最新 release: ${v}"
+          fi
+          case "${v}" in
+            ""|null) echo "::error::无法解析上游版本"; exit 1 ;;
+          esac
+
+          # 上游打了 tag 但镜像可能还没推完，这种情况静默跳过，第二天再来
+          if ! docker buildx imagetools inspect "${BASE}:${v}" >/dev/null 2>&1; then
+            echo "::notice::${BASE}:${v} 尚不存在（上游镜像可能还在发布），本次跳过"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 同一版本只构建一次，除非手动勾选 rebuild
+          if [ "${REBUILD}" != "true" ] \
+             && docker buildx imagetools inspect "${image}:${v}" >/dev/null 2>&1; then
+            echo "::notice::${image}:${v} 已存在，跳过构建"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "version=${v}" >> "$GITHUB_OUTPUT"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: 设置 QEMU（跨架构构建需要）
+        if: steps.ver.outputs.skip != 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: 设置 Buildx
+        if: steps.ver.outputs.skip != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: 多架构构建并推送
+        if: steps.ver.outputs.skip != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BASE_IMAGE=${{ env.BASE }}:${{ steps.ver.outputs.version }}
+            OPENCODE_VERSION=${{ steps.ver.outputs.version }}
+          tags: |
+            ${{ steps.ver.outputs.image }}:${{ steps.ver.outputs.version }}
+            ${{ steps.ver.outputs.image }}:latest
+          pull: true
+          push: true
+          provenance: false
+          cache-from: type=gha,scope=opencode-full
+          cache-to: type=gha,mode=max,scope=opencode-full
+
+      - name: 拉回来自检
+        if: steps.ver.outputs.skip != 'true'
+        env:
+          IMAGE: ${{ steps.ver.outputs.image }}
+          V: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker pull --platform linux/amd64 "${IMAGE}:${V}"
+          echo "opencode: $(docker run --rm --platform linux/amd64 "${IMAGE}:${V}" --version)"
+          docker run --rm --platform linux/amd64 --entrypoint sh "${IMAGE}:${V}" -c \
+            'set -eu;
+             echo "git      : $(git --version)";
+             echo "git-lfs  : $(git lfs version)";
+             echo "ssh      : $(ssh -V 2>&1)";
+             echo "bash     : $(bash --version | head -1)";
+             echo "curl     : $(curl --version | head -1)";
+             echo "node     : $(node --version)";
+             echo "npm      : $(npm --version)";
+             echo "python   : $(python3 --version)";
+             echo "gcc      : $(gcc --version | head -1)";
+             echo "sed/find : $(sed --version | head -1) / $(find --version | head -1)";
+             echo "grep -P  : $(printf abc | grep -P "a.c")";
+             echo "rg       : $(rg --version | head -1)";
+             echo "jq       : $(jq --version)";
+             echo "date     : $(date)";
+             [ "$(date +%Z)" = "CST" ]'
+
+      - name: 写入运行摘要
+        if: steps.ver.outputs.skip != 'true'
+        env:
+          IMAGE: ${{ steps.ver.outputs.image }}
+          V: ${{ steps.ver.outputs.version }}
+        run: |
+          {
+            echo "## ${IMAGE}:${V} 已推送"
+            echo ""
+            echo '```bash'
+            echo "docker pull ${IMAGE}:${V}"
+            echo "docker run -it --rm -v \"\$PWD:/workspace\" -w /workspace ${IMAGE}:${V}"
+            echo '```'
+            echo ""
+            echo "同时更新标签 \`latest\`。架构与层信息："
+            echo ""
+            echo '```'
+            docker buildx imagetools inspect "${IMAGE}:${V}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
