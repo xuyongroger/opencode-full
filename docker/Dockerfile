@@ -29,12 +29,14 @@ ENV TZ=Asia/Shanghai
 #   git / git-lfs / openssh-client → snapshot(undo/redo)、diff、worktree、ssh 推送
 #   coreutils / grep / sed / findutils … → 覆盖 busybox applet，GNU grep -P、find -printf 等不再报错
 #   jq / file / zip / less / procps / bind-tools → 日常排查
+#   sqlite / openssl / pkgconf / patch / rsync / tree → 高频小缺口，合计约 3.4 MiB
 # hadolint ignore=DL3018
 RUN apk add --no-cache \
       git git-lfs openssh-client \
       bash curl wget tzdata \
       coreutils grep sed findutils diffutils gawk util-linux \
       jq file zip unzip less procps bind-tools htop lsof \
+      sqlite openssl pkgconf patch rsync tree \
     && rm -rf /var/cache/apk/*
 
 # hadolint ignore=DL3018
@@ -75,6 +77,10 @@ RUN set -eu; \
     echo "grep -P  : $(printf abc | grep -P 'a.c')"; \
     echo "rg       : $(rg --version | head -1)"; \
     echo "jq       : $(jq --version)"; \
+    echo "sqlite   : $(sqlite3 --version | cut -d" " -f1-3)"; \
+    echo "openssl  : $(openssl version)"; \
+    echo "pkgconf  : $(pkgconf --version)"; \
+    echo "patch    : $(patch --version | head -1)"; \
     echo "date     : $(date)"; \
     [ "$(date +%Z)" = "CST" ]
 

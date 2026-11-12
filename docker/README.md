@@ -84,6 +84,10 @@ coreutils: sed (GNU sed) 4.9 / find (GNU findutils) 4.10.0
 grep -P  : abc
 rg       : ripgrep 15.1.0
 jq       : jq-1.8.2
+sqlite   : 3.53.4 2026-05-28
+openssl  : OpenSSL 3.5.9 29 Sep 2026
+pkgconf  : 2.5.1
+patch    : GNU patch 2.8.1
 date     : Thu Nov 12 10:37:36 CST 2026
 ```
 
@@ -107,6 +111,7 @@ Dockerfile 里也有一份同样的构建期自检 —— 任何一项没装上�
 | `python3` / `pip` | pytest、pip 装不了 | ✅ `python3` `py3-pip` |
 | `gcc` / `make` | node-gyp 原生模块编译不了 | ✅ `make` `g++` `python3-dev` |
 | `jq` 等排查工具 | — | ✅ `jq file zip unzip less procps bind-tools htop lsof` |
+| 调试/编译高频缺口 | 打不开 `opencode.db`、没有 `openssl` 命令行、缺 `pkg-config` 导致原生模块编译失败 | ✅ `sqlite openssl pkgconf patch rsync tree`（合计约 3.4 MiB） |
 | `bun` | 独立 `bun` 命令 | ⚠️ **Alpine 仓库无此包**（实测 `apk policy bun` 空）。opencode 自带内置 bun 运行时，一般不需要；Dockerfile 里给了可选的官方 musl 构建安装块，取消注释即可 |
 | `zsh` | 无 zsh | ⚠️ 未装（`zsh 5.9-r7` 可用，按需在第一个 apk 行加） |
 | musl 而非 glibc | glibc 预编译二进制跑不了 | ❌ 加包解决不了，要 glibc 就换 `ubuntu:24.04` 基础镜像 |
