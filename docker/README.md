@@ -152,7 +152,7 @@ docker run --rm --entrypoint sh opencode-full:test -c 'git --version && node -v 
 
 ## 两个已知的坑
 
-1. **装了 bash 不等于 shell 工具就用 bash。** opencode 实测 spawn 的是 `/bin/sh`（日志里
-   `command=/bin/sh args=["-c", ...]`）。需要 bash 特性就在命令里显式 `bash -c '...'`。
+1. **shell 工具用哪个解释器取决于装了什么。** 官方镜像（只有 busybox）里 opencode spawn 的是
+   `/bin/sh`；本镜像装了 bash 后实测（`/proc/$$/exe`）用的是 `/bin/bash`，bash 语法可直接用。
 2. **Alpine 是 musl，不是 glibc。** `apk` 里的包没问题，但别指望直接跑 Ubuntu 下 `apt` 装出来的
    预编译二进制。真正要 glibc，就把基础镜像换成 `ubuntu:24.04` 自己装 opencode 二进制。
