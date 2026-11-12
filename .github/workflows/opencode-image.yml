@@ -4,6 +4,8 @@ name: build-opencode-full-image
 # （git / bash / curl / tzdata / node / npm / python）的镜像并推到 GHCR。
 # 版本没变化就跳过，不浪费 Actions 分钟。
 #
+# 目标架构：仅 linux/amd64（x86_64），不构建 arm64，因此无需 QEMU。
+#
 # ⚠️ 当前是「手动模式」：schedule 已被注释掉，push 代码不会触发构建（本 workflow
 #    也没有 push 触发器）。要恢复每日自动构建，取消下面 schedule 两行的注释即可。
 on:
@@ -94,21 +96,17 @@ jobs:
           echo "image=${image}" >> "$GITHUB_OUTPUT"
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
-      - name: 设置 QEMU（跨架构构建需要）
-        if: steps.ver.outputs.skip != 'true'
-        uses: docker/setup-qemu-action@v3
-
       - name: 设置 Buildx
         if: steps.ver.outputs.skip != 'true'
         uses: docker/setup-buildx-action@v3
 
-      - name: 多架构构建并推送
+      - name: 构建并推送（仅 linux/amd64）
         if: steps.ver.outputs.skip != 'true'
         uses: docker/build-push-action@v6
         with:
           context: docker
           file: docker/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64   # 只适配 x86_64；需要 arm64 时改成 linux/amd64,linux/arm64
           build-args: |
             BASE_IMAGE=${{ env.BASE }}:${{ steps.ver.outputs.version }}
             OPENCODE_VERSION=${{ steps.ver.outputs.version }}

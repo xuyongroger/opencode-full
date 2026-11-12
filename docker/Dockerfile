@@ -3,7 +3,7 @@
 # worktree、VCS 集成、npm test、npx 类 stdio MCP 全部不可用；busybox 版 grep/sed/date
 # 还会让 agent 写出来的 GNU 风格命令直接报错。这里按层补齐。
 #
-# 继承官方多架构镜像（linux/amd64 + linux/arm64），并继承其 ENTRYPOINT ["opencode"]。
+# 继承官方镜像（上游为多架构，本仓库只构建 linux/amd64），并继承其 ENTRYPOINT ["opencode"]。
 #
 # 构建示例：
 #   docker build --build-arg BASE_IMAGE=ghcr.io/anomalyco/opencode:2.2.7 \

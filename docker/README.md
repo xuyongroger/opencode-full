@@ -42,11 +42,11 @@ ghcr.io/<你的用户名小写>/opencode-full:latest
 
 `push` 不是本 workflow 的触发器，所以推代码本身永远不会触发构建。
 
-Actions 免费额度：私有仓库每月 2000 分钟。一次构建（amd64 + arm64，含 QEMU 模拟 arm64）约 8–15 分钟；
-没新版本时整个 workflow 十几秒就退出，基本不消耗。
+**目标架构：仅 `linux/amd64`（x86_64）** —— 不构建 arm64，因此不需要 QEMU，一次构建约
+2–4 分钟；没新版本时整个 workflow 十几秒就退出。Actions 免费额度：每月 2000 分钟，绰绰有余。
 
-> QEMU 模拟 arm64 那一段最慢。只用 x86 服务器的话，把 workflow 里的 `platforms` 改成
-> `linux/amd64` 一行，构建时间降到 2 分钟左右。
+> 代价：这个镜像不能在 Apple Silicon / ARM 服务器上原生运行。需要 arm64 时把 workflow 里的
+> `platforms` 改回 `linux/amd64,linux/arm64`，并把已删掉的 `docker/setup-qemu-action` 那一步加回来。
 
 ## 运行
 
