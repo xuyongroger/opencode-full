@@ -126,7 +126,7 @@ Dockerfile 里也有一份同样的构建期自检 —— 任何一项没装上�
 | opencode-full 不含编译链 | 约 **425 MiB** | `--build-arg WITH_TOOLCHAIN=0` |
 
 编译链净增 355.5 MiB（gcc 159.9 + python3-dev 101.1 + g++ 45.1 + libstdc++-dev 21.9 + binutils 10.1 + musl-dev 9.4 …）。
-`docker pull` 的传输量约为未压缩的 0.48 倍（按官方镜像压缩比推算）：含编译链约 375 MiB，不含约 205 MiB。
+`docker pull` 传输量（2.2.7 构建产物 manifest 实测）：9 层压缩合计 **342 MiB**（大头：opencode 二进制层 118 + 编译链层 149 + 运行时层 42）。
 
 ## 想调内容
 
