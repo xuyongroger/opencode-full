@@ -1,6 +1,6 @@
 # opencode-full
 
-对官方 `ghcr.io/anomalyco/opencode` 镜像的补全封装：**同一个 opencode 二进制**（当前 v2.3.2），
+对官方 `ghcr.io/anomalyco/opencode` 镜像的补全封装：**同一个 opencode 二进制**（当前 v2.4.0），
 但补齐了它运行所需的工具链，让 snapshot(undo/redo)、git 集成、`npm`/`npx` 类 MCP、Python、
 编译 C/C++ 等能力在容器里真正可用。
 
@@ -8,8 +8,8 @@
 
 | 项 | 值 |
 | --- | --- |
-| 镜像地址 | `ghcr.io/xuyongroger/opencode-full:2.3.2` / `:latest`（同一镜像） |
-| digest | `sha256:dfddb53c839ce80882f6360410e601c12578c1124dd106e4670cfb6a1f929c8d` |
+| 镜像地址 | `ghcr.io/xuyongroger/opencode-full:2.4.0` / `:latest`（同一镜像） |
+| digest | `sha256:86a4bd874dd5fe10f116ac05e294d620222a23fe1691d7134f76db51713c8aaf` |
 | 基础镜像 | `ghcr.io/anomalyco/opencode:<上游版本>`，继承其 `ENTRYPOINT ["opencode"]` |
 | 包可见性 | public，无需 `docker login` 即可拉取 |
 | 构建 | 手动触发 workflow（版本留空=跟随上游最新正式版；schedule 已注释，未开每日自动） |

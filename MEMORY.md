@@ -22,7 +22,7 @@
 
 ## 结论
 
-- [2026-11-18] 结论 | 已构建推送：2.2.7（run 43156104828）、2.3.0（run 43421737173）、2.3.2（run 44313917279，digest dfddb53c）；latest 随最新构建移动。构建成功=18 项自检全过（构建期门禁），验证版本不必拉日志：ghcr blobs 里 OCI LABEL `image.version` 即 ground truth。
+- [2026-11-23] 结论 | 已构建推送：2.2.7 / 2.3.0 / 2.3.2（run 44313917279）/ 2.4.0（run 45178721807，digest 86a4bd87，353 MiB）；latest 随最新构建移动。构建成功=18 项自检全过（构建期门禁），验证版本不必拉日志：ghcr blobs 里 OCI LABEL `image.version` 即 ground truth。每次 opencode 换代 apk 层重跑、组件随之刷新（压缩体积 342→343→353 MiB 可佐证）。
 - [2026-11-12] 结论 | 镜像含 36 个 apk 包（层1 基础+GNU 29 / 层2 node+python 4 / 层3 编译链 3）；未压缩约 780 MiB，pull 传输实测 342 MiB（9 层压缩）。
 - [2026-11-12] 结论 | 默认镜像可直接编译 C++（g++ 15.2 + musl-dev + libstdc++-dev 自动带入，实测 C++23/OpenMP/-static/make/Python 扩展全过）；cmake/gdb/autoconf 未装属按需项。
 - [2026-11-12] 结论 | ghcr 匿名拉取验证：token 端点取匿名 token 后 GET /v2/xuyongroger/opencode-full/manifests/latest 返回 200 = public 生效。
